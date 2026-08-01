@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Vault — Personal Storage</title>
+<meta name="description" content="A private, offline, on-device vault for your notes and files. Nothing ever leaves your browser.">
+<meta name="theme-color" content="#0b0c0f">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vault">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ SETUP (first launch) ============ -->
+  <section id="screen-setup" class="screen" hidden>
+    <div class="auth-wrap">
+      <div class="brand">
+        <div class="brand-mark" id="setupBrandIcon" data-icon="lock"></div>
+        <h1>Set up your Vault</h1>
+        <p class="muted">Choose how you'll unlock it. Everything is encrypted on this device — there is no account and no password reset.</p>
+      </div>
+
+      <div class="segmented" id="setupModeSwitch" role="tablist" aria-label="Unlock method">
+        <button type="button" class="segmented-btn is-active" data-mode="pin" role="tab" aria-selected="true">PIN</button>
+        <button type="button" class="segmented-btn" data-mode="password" role="tab" aria-selected="false">Password</button>
+      </div>
+
+      <div id="setupPinArea"></div>
+
+      <div id="setupPasswordArea" class="password-area" hidden>
+        <label class="field-label" for="setupPw1">Master password</label>
+        <div class="pw-input-row">
+          <input id="setupPw1" type="password" autocomplete="new-password" placeholder="At least 8 characters" />
+          <button type="button" class="pw-eye" data-toggle-eye="setupPw1" data-icon="eye" aria-label="Show password"></button>
+        </div>
+        <div class="strength-meter" id="strengthMeter"><span></span></div>
+
+        <label class="field-label" for="setupPw2">Confirm password</label>
+        <div class="pw-input-row">
+          <input id="setupPw2" type="password" autocomplete="new-password" placeholder="Re-enter password" />
+          <button type="button" class="pw-eye" data-toggle-eye="setupPw2" data-icon="eye" aria-label="Show password"></button>
+        </div>
+        <button class="btn btn-primary btn-block" id="setupPwSubmit" disabled>Create Vault</button>
+      </div>
+
+      <p class="fineprint" id="setupWarning">⚠ If you forget this, your notes and files cannot be recovered — encryption keys are derived only from what you enter, and never stored anywhere.</p>
+    </div>
+  </section>
+
+  <!-- ============ LOCK SCREEN ============ -->
+  <section id="screen-lock" class="screen" hidden>
+    <div class="auth-wrap">
+      <div class="brand">
+        <div class="brand-mark" id="lockBrandIcon" data-icon="lock"></div>
+        <h1 id="lockTitle">Enter your PIN</h1>
+        <p class="muted" id="lockSubtitle">Vault is locked</p>
+      </div>
+
+      <div id="lockPinArea"></div>
+
+      <div id="lockPasswordArea" class="password-area" hidden>
+        <div class="pw-input-row">
+          <input id="lockPwInput" type="password" autocomplete="current-password" placeholder="Master password" />
+          <button type="button" class="pw-eye" data-toggle-eye="lockPwInput" data-icon="eye" aria-label="Show password"></button>
+        </div>
+        <button class="btn btn-primary btn-block" id="lockPwSubmit">Unlock</button>
+      </div>
+
+      <p class="fineprint danger" id="lockError" hidden></p>
+      <button class="link-btn" id="resetVaultLink">Forgot it? Reset this vault</button>
+    </div>
+  </section>
+
+  <!-- ============ MAIN APP ============ -->
+  <section id="screen-main" class="screen" hidden>
+
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="topbar-icon" id="mainBrandIcon" data-icon="shieldCheck"></span>
+        <span id="topbarLabel">Vault</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="searchToggleBtn" aria-label="Search" data-icon="search"></button>
+        <button class="icon-btn" id="lockNowBtn" aria-label="Lock vault" data-icon="lock"></button>
+      </div>
+    </header>
+
+    <div class="searchbar" id="searchBar" hidden>
+      <input id="searchInput" type="search" placeholder="Search titles, filenames, tags…" autocomplete="off" />
+      <button class="icon-btn" id="searchCloseBtn" aria-label="Close search" data-icon="close"></button>
+    </div>
+
+    <div class="tagbar" id="tagBar"></div>
+
+    <main class="list-view" id="listView">
+      <div class="empty-state" id="emptyState" hidden>
+        <div class="empty-icon" id="emptyIcon" data-icon="grid"></div>
+        <p class="empty-title">Nothing here yet</p>
+        <p class="muted" id="emptySub">Tap + to add your first note or file.</p>
+      </div>
+      <div id="listItems"></div>
+    </main>
+
+    <button class="fab" id="fabAdd" aria-label="Add" data-icon="plus"></button>
+
+    <nav class="bottomnav" id="bottomNav">
+      <button class="nav-btn is-active" data-view="all"><span class="nav-icon" data-icon="all"></span><span>Vault</span></button>
+      <button class="nav-btn" data-view="notes"><span class="nav-icon" data-icon="note"></span><span>Notes</span></button>
+      <button class="nav-btn" data-view="files"><span class="nav-icon" data-icon="file"></span><span>Files</span></button>
+      <button class="nav-btn" data-view="settings"><span class="nav-icon" data-icon="settings"></span><span>Settings</span></button>
+    </nav>
+  </section>
+
+  <!-- ============ SETTINGS SCREEN ============ -->
+  <section id="screen-settings" class="screen" hidden>
+    <header class="topbar">
+      <button class="icon-btn" id="settingsBackBtn" aria-label="Back" data-icon="chevronLeft"></button>
+      <div class="topbar-title"><span>Settings</span></div>
+      <div class="topbar-actions"></div>
+    </header>
+    <main class="settings-view">
+
+      <div class="settings-group">
+        <p class="settings-group-title">Security</p>
+        <button class="settings-row" id="changeSecretBtn">
+          <span class="settings-row-icon" data-icon="key"></span>
+          <span class="settings-row-text">
+            <span class="settings-row-label">Change PIN / Password</span>
+            <span class="settings-row-sub">Re-encrypts your entire vault</span>
+          </span>
+          <span class="settings-row-chevron" data-icon="chevronRight"></span>
+        </button>
+        <div class="settings-row settings-row-static">
+          <span class="settings-row-icon" data-icon="shieldCheck"></span>
+          <span class="settings-row-text">
+            <span class="settings-row-label">Auto-lock after inactivity</span>
+            <span class="settings-row-sub">Locks instantly when this tab is hidden, too</span>
+          </span>
+          <select id="autoLockSelect" class="mini-select">
+            <option value="1">1 min</option>
+            <option value="2">2 min</option>
+            <option value="5">5 min</option>
+            <option value="10">10 min</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <p class="settings-group-title">Tags</p>
+        <div class="settings-row settings-row-static settings-row-tags">
+          <span class="settings-row-icon" data-icon="tag"></span>
+          <span class="settings-row-text">
+            <span class="settings-row-label">Custom tags</span>
+            <div class="chip-row" id="customTagChips"></div>
+            <div class="add-tag-row">
+              <input id="newTagInput" type="text" maxlength="24" placeholder="New tag name" />
+              <button class="btn btn-small" id="addTagBtn">Add</button>
+            </div>
+          </span>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <p class="settings-group-title">Backup</p>
+        <button class="settings-row" id="exportBtn">
+          <span class="settings-row-icon" data-icon="exportIcon"></span>
+          <span class="settings-row-text">
+            <span class="settings-row-label">Export encrypted backup</span>
+            <span class="settings-row-sub">Saves a .vault file to your device</span>
+          </span>
+          <span class="settings-row-chevron" data-icon="chevronRight"></span>
+        </button>
+        <button class="settings-row" id="importBtn">
+          <span class="settings-row-icon" data-icon="importIcon"></span>
+          <span class="settings-row-text">
+            <span class="settings-row-label">Import backup</span>
+            <span class="settings-row-sub">Replaces everything currently in this vault</span>
+          </span>
+          <span class="settings-row-chevron" data-icon="chevronRight"></span>
+        </button>
+        <input type="file" id="importFileInput" accept=".vault,.json,application/json" hidden />
+      </div>
+
+      <div class="settings-group">
+        <p class="settings-group-title">Storage</p>
+        <div class="settings-row settings-row-static">
+          <span class="settings-row-icon" data-icon="grid"></span>
+          <span class="settings-row-text">
+            <span class="settings-row-label">On-device usage</span>
+            <span class="settings-row-sub" id="storageUsageText">Calculating…</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <p class="settings-group-title danger-title">Danger zone</p>
+        <button class="settings-row danger-row" id="nukeBtn">
+          <span class="settings-row-icon" data-icon="skull"></span>
+          <span class="settings-row-text">
+            <span class="settings-row-label">Nuke vault</span>
+            <span class="settings-row-sub">Permanently deletes everything on this device</span>
+          </span>
+          <span class="settings-row-chevron" data-icon="chevronRight"></span>
+        </button>
+      </div>
+
+      <p class="fineprint settings-footer">Vault stores everything locally in this browser using AES-GCM 256 encryption. No network requests are ever made with your data.</p>
+    </main>
+  </section>
+
+</div>
+
+<!-- ============ MODAL / SHEET OVERLAY ============ -->
+<div id="overlay" class="overlay" hidden>
+  <div class="overlay-backdrop" data-close></div>
+  <div class="sheet" id="sheetContainer" role="dialog" aria-modal="true"></div>
+</div>
+
+<!-- ============ TOAST ============ -->
+<div id="toast" class="toast" hidden></div>
+
+<script src="./js/crypto.js"></script>
+<script src="./js/db.js"></script>
+<script src="./js/icons.js"></script>
+<script src="./js/markdown.js"></script>
+<script src="./js/app.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('./sw.js').catch(function () { /* offline install still works without SW */ });
+    });
+  }
+</script>
+</body>
+</html>
